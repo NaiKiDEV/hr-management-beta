@@ -1,21 +1,22 @@
 import { signIn, signOut, useSession } from "next-auth/react";
-
-import { trpc } from "../utils/trpc";
 import {
-  type PropsWithChildren,
   useCallback,
   useEffect,
-  useState,
+  useState, type PropsWithChildren
 } from "react";
+import { trpc } from "../utils/trpc";
 
-export const UserProfileProvider = ({ children }: PropsWithChildren) => {
+const UserProfileProvider = ({ children }: PropsWithChildren) => {
   const { data: sessionData } = useSession();
   const [error, setError] = useState<string | undefined>();
   const [authCheckPassed, setAuthCheckPassed] = useState<boolean>(false);
 
-  const { data: userProfile } = trpc.userProfile.current.useQuery(undefined, {
-    enabled: sessionData?.user !== undefined,
-  });
+  const { data: userProfile } = trpc.userProfile.getCurrentUserProfile.useQuery(
+    undefined,
+    {
+      enabled: sessionData?.user !== undefined,
+    }
+  );
 
   const { mutateAsync: mapUserToProfile } =
     trpc.userProfile.mapUserToProfile.useMutation();
@@ -24,6 +25,7 @@ export const UserProfileProvider = ({ children }: PropsWithChildren) => {
     const { error, success } = await mapUserToProfile();
     if (error) {
       setError(error);
+      setAuthCheckPassed(true);
     }
     if (success) {
       setAuthCheckPassed(true);
@@ -36,6 +38,9 @@ export const UserProfileProvider = ({ children }: PropsWithChildren) => {
         handleAccountSync();
       }
       if (userProfile) {
+        setAuthCheckPassed(true);
+      }
+      if (!sessionData?.user && !userProfile) {
         setAuthCheckPassed(true);
       }
     }
@@ -109,3 +114,5 @@ export const UserProfileProvider = ({ children }: PropsWithChildren) => {
     </div>
   );
 };
+
+export { UserProfileProvider };
